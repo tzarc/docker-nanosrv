@@ -1,0 +1,22 @@
+FROM busybox:latest as builder
+
+COPY src/ /www
+
+WORKDIR /www
+RUN echo '<html><body>' > index.html \
+    && ls -1 * | sort | sed -e 's/\(.*\)/<a href="\1">\1<\/a><br\/>/' >> index.html \
+    && echo '</body></html>' >> index.html \
+    && find /www -type d -exec chmod 0700 '{}' + \
+    && find /www -type f -exec chmod 0600 '{}' +
+
+FROM tzarc/nanosrv:latest
+
+ENV PUID=5374 \
+    PGID=5374 \
+    BIND_ADDRESS=0.0.0.0 \
+    BIND_PORT=11253 \
+    DOC_ROOT=/www \
+    NUM_THREADS=8
+
+COPY --chown=$PUID:$PGID --from=builder /www /www
+
